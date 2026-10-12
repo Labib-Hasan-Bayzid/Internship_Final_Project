@@ -9,4 +9,4 @@ kubernetes>=34,<36
 openai>=1.109,<3
 pytest>=8.4,<9
 
-stripe>=12,<16
+stripe>=16.0.0,<17
