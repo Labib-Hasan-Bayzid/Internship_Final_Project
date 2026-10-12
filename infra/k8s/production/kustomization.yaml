@@ -5,18 +5,18 @@ resources:
   - production-ingress.yaml
   - app-config.yaml
 images:
-  - name: ghcr.io/OWNER/dependency-change-verification-backend
-    newName: ghcr.io/OWNER/dependency-change-verification-backend
-    newTag: latest
-  - name: ghcr.io/OWNER/dependency-change-verification-frontend
-    newName: ghcr.io/OWNER/dependency-change-verification-frontend
-    newTag: latest
-  - name: ghcr.io/OWNER/dependency-change-verification-runner-python
-    newName: ghcr.io/OWNER/dependency-change-verification-runner-python
-    newTag: latest
-  - name: ghcr.io/OWNER/dependency-change-verification-runner-node
-    newName: ghcr.io/OWNER/dependency-change-verification-runner-node
-    newTag: latest
+  - name: ghcr.io/Labib-Hasan-Bayzid/dependency-change-verification-backend
+    newName: ghcr.io/Labib-Hasan-Bayzid/dependency-change-verification-backend
+    newTag: sha-3daa5e85400bc2566ff14e725ae920706e9aabc5
+  - name: ghcr.io/Labib-Hasan-Bayzid/dependency-change-verification-frontend
+    newName: ghcr.io/Labib-Hasan-Bayzid/dependency-change-verification-frontend
+    newTag: sha-3daa5e85400bc2566ff14e725ae920706e9aabc5
+  - name: ghcr.io/Labib-Hasan-Bayzid/dependency-change-verification-runner-python
+    newName: ghcr.io/Labib-Hasan-Bayzid/dependency-change-verification-runner-python
+    newTag: sha-3daa5e85400bc2566ff14e725ae920706e9aabc5
+  - name: ghcr.io/Labib-Hasan-Bayzid/dependency-change-verification-runner-node
+    newName: ghcr.io/Labib-Hasan-Bayzid/dependency-change-verification-runner-node
+    newTag: sha-3daa5e85400bc2566ff14e725ae920706e9aabc5
 patches:
   - target:
       kind: ConfigMap
@@ -53,9 +53,9 @@ patches:
                         key: DATABASE_URL
                         optional: false
                   - name: RUNNER_IMAGE_PYTHON
-                    value: ghcr.io/OWNER/dependency-change-verification-runner-python:latest
+                    value: ghcr.io/Labib-Hasan-Bayzid/dependency-change-verification-runner-python:latest
                   - name: RUNNER_IMAGE_NODE
-                    value: ghcr.io/OWNER/dependency-change-verification-runner-node:latest
+                    value: ghcr.io/Labib-Hasan-Bayzid/dependency-change-verification-runner-node:latest
                   - name: DEV_IDENTITY_BOOTSTRAP
                     value: "false"
                 imagePullPolicy: IfNotPresent
