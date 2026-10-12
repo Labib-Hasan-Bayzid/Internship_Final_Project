@@ -6,7 +6,7 @@ pydantic-settings>=2.10,<3
 httpx>=0.28,<1
 PyJWT[crypto]>=2.10,<3
 kubernetes>=34,<36
-openai>=1.109,<3
+openai>=3.27.0,<4
 pytest>=8.4,<9
 
 stripe>=12,<16
