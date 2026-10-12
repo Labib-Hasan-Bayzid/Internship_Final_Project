@@ -1,0 +1,25 @@
+{
+  "name": "Dependency Change Verification",
+  "url": "https://YOUR-DCV-DOMAIN",
+  "hook_attributes": {
+    "url": "https://YOUR-DCV-DOMAIN/webhooks/github",
+    "active": true
+  },
+  "redirect_url": "https://YOUR-DCV-DOMAIN/github/callback",
+  "public": false,
+  "default_permissions": {
+    "contents": "read",
+    "metadata": "read",
+    "pull_requests": "read",
+    "checks": "write",
+    "issues": "write"
+  },
+  "default_events": [
+    "pull_request",
+    "installation",
+    "installation_repositories"
+  ],
+  "description": "Verifies dependency upgrades by comparing old and new versions under controlled execution and publishing evidence-backed GitHub Checks.",
+  "setup_url": "https://YOUR-DCV-DOMAIN/api/github/setup",
+  "setup_on_update": true
+}

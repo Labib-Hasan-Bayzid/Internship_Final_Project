@@ -1,0 +1,100 @@
+name: Release Verification
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Release tag, e.g. v15.0.0"
+        required: true
+        type: string
+  release:
+    types: [published]
+
+permissions:
+  contents: read
+  packages: read
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    environment: production
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_DB: dcv_test
+          POSTGRES_USER: dcv
+          POSTGRES_PASSWORD: dcv
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U dcv -d dcv_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.release.tag_name || inputs.version || github.sha }}
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+      - name: Install Python dependencies
+        run: python -m pip install -r backend/requirements.txt pyyaml
+      - name: Validate backend
+        env:
+          DATABASE_URL: postgresql+psycopg://dcv:dcv@localhost:5432/dcv_test
+          K8S_ENABLED: "false"
+          DEV_IDENTITY_BOOTSTRAP: "true"
+        run: |
+          python -m compileall -q backend/app backend/tests runner/python
+          pytest -q backend/tests
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+      - name: Validate frontend
+        working-directory: frontend
+        env:
+          BACKEND_INTERNAL_URL: http://backend:8000
+        run: npm install --no-audit --no-fund && npm run build
+      - uses: azure/setup-kubectl@v4
+        with:
+          version: v1.37.0
+      - name: Validate Kubernetes release
+        run: |
+          kubectl kustomize infra/k8s/local >/tmp/dcv-local.yaml
+          kubectl kustomize infra/k8s/production >/tmp/dcv-production.yaml
+          test -s /tmp/dcv-local.yaml
+          test -s /tmp/dcv-production.yaml
+      - name: Validate PowerShell scripts
+        shell: pwsh
+        run: |
+          $allErrors = @()
+          Get-ChildItem -Path scripts -Filter *.ps1 -File | ForEach-Object {
+            $tokens = $null
+            $parseErrors = $null
+            [System.Management.Automation.Language.Parser]::ParseFile($_.FullName, [ref]$tokens, [ref]$parseErrors) | Out-Null
+            if ($parseErrors.Count -gt 0) {
+              foreach ($err in $parseErrors) {
+                $allErrors += "$($_.Name):$($err.Extent.StartLineNumber): $($err.Message)"
+              }
+            }
+          }
+          if ($allErrors.Count -gt 0) {
+            $allErrors | ForEach-Object { Write-Error $_ }
+            exit 1
+          }
+          Write-Host "All PowerShell scripts parse successfully."
+      - name: Validate release version
+        env:
+          RELEASE_VERSION: ${{ github.event.release.tag_name || inputs.version }}
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import os
+          tag = os.environ['RELEASE_VERSION']
+          expected = 'v' + Path('VERSION').read_text().strip()
+          if tag != expected:
+              raise SystemExit(f'RELEASE_VERSION {tag!r} does not match VERSION {expected!r}')
+          print(f'Release version validated: {tag}')
+          PY

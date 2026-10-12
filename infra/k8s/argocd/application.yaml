@@ -1,0 +1,35 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: dependency-change-verification
+  namespace: argocd
+  labels:
+    app.kubernetes.io/part-of: dependency-change-verification
+spec:
+  project: dependency-change-verification
+  source:
+    repoURL: https://github.com/OWNER/dependency-change-verification.git
+    targetRevision: main
+    path: infra/k8s/production
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: dcv
+  revisionHistoryLimit: 10
+  syncPolicy:
+    automated:
+      enabled: true
+      prune: true
+      selfHeal: true
+      allowEmpty: false
+    retry:
+      limit: 5
+      refresh: true
+      backoff:
+        duration: 5s
+        factor: 2
+        maxDuration: 3m
+    syncOptions:
+      - CreateNamespace=true
+      - PruneLast=true
+      - ApplyOutOfSyncOnly=true
+      - PrunePropagationPolicy=foreground

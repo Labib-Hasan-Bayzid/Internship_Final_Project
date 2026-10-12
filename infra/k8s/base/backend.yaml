@@ -1,0 +1,106 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: backend
+  namespace: dcv
+spec:
+  selector:
+    app: dcv-backend
+  ports:
+    - port: 8000
+      targetPort: 8000
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: backend
+  namespace: dcv
+spec:
+  replicas: 2
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 1
+  selector:
+    matchLabels:
+      app: dcv-backend
+  template:
+    metadata:
+      labels:
+        app: dcv-backend
+    spec:
+      serviceAccountName: dcv-backend
+      # Allow bounded in-flight provider/database operations to return before SIGKILL.
+      terminationGracePeriodSeconds: 60
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              podAffinityTerm:
+                topologyKey: kubernetes.io/hostname
+                labelSelector:
+                  matchLabels:
+                    app: dcv-backend
+      containers:
+        - name: backend
+          image: ghcr.io/OWNER/dependency-change-verification-backend:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8000
+          envFrom:
+            - configMapRef:
+                name: dcv-config
+            - secretRef:
+                name: dcv-integrations
+                optional: true
+          env:
+            - name: DATABASE_URL
+              value: postgresql+psycopg://dcv:dcv@postgres:5432/dcv
+            - name: RUNNER_IMAGE_PYTHON
+              value: ghcr.io/OWNER/dependency-change-verification-runner-python:latest
+            - name: RUNNER_IMAGE_NODE
+              value: ghcr.io/OWNER/dependency-change-verification-runner-node:latest
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: 500m
+              memory: 768Mi
+          # Startup includes database schema verification/migrations. Keep liveness from
+          # restarting the process while that one-time startup work is still running.
+          startupProbe:
+            httpGet:
+              path: /api/health
+              port: 8000
+            periodSeconds: 5
+            timeoutSeconds: 2
+            failureThreshold: 60
+          readinessProbe:
+            httpGet:
+              path: /api/ready
+              port: 8000
+            initialDelaySeconds: 10
+            periodSeconds: 5
+            timeoutSeconds: 2
+            failureThreshold: 6
+          livenessProbe:
+            httpGet:
+              path: /api/health
+              port: 8000
+            initialDelaySeconds: 20
+            periodSeconds: 10
+            timeoutSeconds: 2
+            failureThreshold: 3
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: backend-pdb
+  namespace: dcv
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: dcv-backend

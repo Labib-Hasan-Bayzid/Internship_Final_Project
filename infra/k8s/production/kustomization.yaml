@@ -1,0 +1,61 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - ../base
+  - ../production-ingress.yaml
+  - app-config.yaml
+images:
+  - name: ghcr.io/OWNER/dependency-change-verification-backend
+    newName: ghcr.io/OWNER/dependency-change-verification-backend
+    newTag: latest
+  - name: ghcr.io/OWNER/dependency-change-verification-frontend
+    newName: ghcr.io/OWNER/dependency-change-verification-frontend
+    newTag: latest
+  - name: ghcr.io/OWNER/dependency-change-verification-runner-python
+    newName: ghcr.io/OWNER/dependency-change-verification-runner-python
+    newTag: latest
+  - name: ghcr.io/OWNER/dependency-change-verification-runner-node
+    newName: ghcr.io/OWNER/dependency-change-verification-runner-node
+    newTag: latest
+patches:
+  - target:
+      kind: ConfigMap
+      name: dcv-config
+    patch: |-
+      apiVersion: v1
+      kind: ConfigMap
+      metadata:
+        name: dcv-config
+      data:
+        APP_PUBLIC_URL: https://app.example.com
+        CORS_ORIGINS: https://app.example.com
+        AI_ENABLED: "true"
+        GITHUB_AUTO_VERIFY: "true"
+  - target:
+      kind: Deployment
+      name: backend
+    patch: |-
+      apiVersion: apps/v1
+      kind: Deployment
+      metadata:
+        name: backend
+      spec:
+        replicas: 3
+        template:
+          spec:
+            containers:
+              - name: backend
+                env:
+                  - name: DATABASE_URL
+                    valueFrom:
+                      secretKeyRef:
+                        name: dcv-integrations
+                        key: DATABASE_URL
+                        optional: false
+                  - name: RUNNER_IMAGE_PYTHON
+                    value: ghcr.io/OWNER/dependency-change-verification-runner-python:latest
+                  - name: RUNNER_IMAGE_NODE
+                    value: ghcr.io/OWNER/dependency-change-verification-runner-node:latest
+                  - name: DEV_IDENTITY_BOOTSTRAP
+                    value: "false"
+                imagePullPolicy: IfNotPresent

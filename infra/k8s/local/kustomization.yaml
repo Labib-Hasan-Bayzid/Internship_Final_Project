@@ -1,0 +1,66 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - ../base
+images:
+  - name: ghcr.io/OWNER/dependency-change-verification-backend
+    newName: dcv-backend
+    newTag: 15.0.0-local
+  - name: ghcr.io/OWNER/dependency-change-verification-frontend
+    newName: dcv-frontend
+    newTag: 15.0.0-local
+  - name: ghcr.io/OWNER/dependency-change-verification-runner-python
+    newName: dcv-runner-python
+    newTag: 15.0.0-local
+  - name: ghcr.io/OWNER/dependency-change-verification-runner-node
+    newName: dcv-runner-node
+    newTag: 15.0.0-local
+patches:
+  - target:
+      kind: Deployment
+      name: backend
+    patch: |-
+      apiVersion: apps/v1
+      kind: Deployment
+      metadata:
+        name: backend
+      spec:
+        replicas: 1
+        template:
+          metadata:
+            annotations:
+              dcv.local/restarted-at: "__DCV_ROLLOUT_STAMP__"
+          spec:
+            terminationGracePeriodSeconds: 60
+            containers:
+              - name: backend
+                imagePullPolicy: Never
+                env:
+                  - name: ENVIRONMENT
+                    value: development
+                  - name: DEV_IDENTITY_BOOTSTRAP
+                    value: "true"
+                  - name: DCV_EXPECTED_RELEASE
+                    value: "15.0.0"
+                  - name: RUNNER_IMAGE_PYTHON
+                    value: dcv-runner-python:15.0.0-local
+                  - name: RUNNER_IMAGE_NODE
+                    value: dcv-runner-node:15.0.0-local
+  - target:
+      kind: Deployment
+      name: frontend
+    patch: |-
+      apiVersion: apps/v1
+      kind: Deployment
+      metadata:
+        name: frontend
+      spec:
+        replicas: 1
+        template:
+          metadata:
+            annotations:
+              dcv.local/restarted-at: "__DCV_ROLLOUT_STAMP__"
+          spec:
+            containers:
+              - name: frontend
+                imagePullPolicy: Never
