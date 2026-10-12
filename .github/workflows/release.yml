@@ -57,7 +57,7 @@ jobs:
         env:
           BACKEND_INTERNAL_URL: http://backend:8000
         run: npm install --no-audit --no-fund && npm run build
-      - uses: azure/setup-kubectl@v4
+      - uses: azure/setup-kubectl@v5
         with:
           version: v1.37.0
       - name: Validate Kubernetes release
